@@ -15,5 +15,5 @@ Libvirt with virsh(https://libvirt.org/) and jq (https://stedolan.github.io/jq/)
 
 ### Automated measurement
 1. Modify parameters in `iperf_run.sh` so that it can be used on your environment.  
-2. Execute `./iperf_run /path/to/dir xen` if you want to launch the client and server side programs at `/path/to/dir` on Xen-based physical servers. "virtio" can be used for QEMU/KVM-based physical servers.
+2. Execute `./iperf_run xen /path/to/dir` if you want to launch the client and server side programs at `/path/to/dir` on Xen-based physical servers. "virtio" can be used for QEMU/KVM-based physical servers.
 
