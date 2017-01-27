@@ -28,7 +28,7 @@ type stats = {
   mutable last_time: int64;
 }
 
-module Main (S: V1_LWT.STACKV4) = struct
+module Main (S: Mirage_types_lwt.STACKV4) = struct
 
   let iperf_port = 5001
 
