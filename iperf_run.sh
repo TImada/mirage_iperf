@@ -59,7 +59,7 @@ cd ./${SERVERPATH}
 make clean
 mirage configure --interface 0 -t ${PLATFORM}
 make
-cd ../../
+cd ../
 
 sed -e s@KERNELPATH@${BASEDIR}/${SERVERBIN}@ ./template/${SERVERXML} > ./${SERVERXML}
 scp ./${SERVERPATH}/${SERVERBIN} ${USER}@${SERVERADDR}:${BASEDIR}/
@@ -83,14 +83,14 @@ sed -e s@KERNELPATH@${BASEDIR}/${CLIENTBIN}@ ./template/${CLIENTXML} > ./${CLIEN
 cd ${CLIENTPATH}
 make clean
 mirage configure --interface 0 -t ${PLATFORM}
-cd ../../
+cd ../
 
 for BUF in ${BUFSIZE}
 do
         cd ${CLIENTPATH}
         sed -i -e "s/let\ blen\ =\ [0-9]*/let blen = ${BUF}/" ./unikernel.ml
         make
-        cd ../../
+        cd ../
         scp ./${CLIENTPATH}/${CLIENTBIN} ${USER}@${CLIENTADDR}:${BASEDIR}/
 
         echo -n "{ \"bufsize\": ${BUF}, \"throughput\": [" >> ./${JSONLOG}
