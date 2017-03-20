@@ -1,19 +1,18 @@
 #! /bin/bash
 
 # Parameters
-CLIENTADDR="localhost"
-SERVERADDR="localhost"
-USER="root"
 BUFSIZE="64 128 256 512 1024 2048"
 OCAMLVER="4.03.0"
 ITERATIONS="10"
+C_TAP="tap1"
+S_TAP="tap0"
 
 # The followings should not be modified
 GUEST="Mirage"
-PLATFORM=${1}
-PROTO=${2}
-BASEDIR=${3}
+NET="--net="
+PLATFORM="ukvm"
 
+PROTO=${1}
 # Check a selected protocol
 case ${PROTO} in
         "tcp" )
@@ -28,20 +27,14 @@ esac
 CURRENT_DIR=${PWD}
 CLIENTPATH="./${APP}_client"
 SERVERPATH="./${APP}_server"
-CLIENTXML="${PLATFORM}_client.xml"
-SERVERXML="${PLATFORM}_server.xml"
 CLIENTBIN="${APP}_client.${PLATFORM}"
 SERVERBIN="${APP}_server.${PLATFORM}"
 
-# Check arguments provided
+# Check the arguments provided
 case ${PLATFORM} in
-        "xen" )
-                VIRSH_C="virsh -c xen+ssh://${CLIENTADDR}";
-                VIRSH_S="virsh -c xen+ssh://${SERVERADDR}";
-        ;;
-        "virtio" )
-                VIRSH_C="virsh -c qemu+ssh://${CLIENTADDR}/system";
-                VIRSH_S="virsh -c qemu+ssh://${SERVERADDR}/system";
+        "ukvm" )
+                CMD_C="./${CLIENTPATH}/ukvm-bin ${NET}${C_TAP} ./${CLIENTPATH}/${CLIENTBIN}";
+                CMD_S="./${SERVERPATH}/ukvm-bin ${NET}${S_TAP} ./${SERVERPATH}/${SERVERBIN}";
         ;;
         * ) echo "Invalid hypervisor selected"; exit
 esac
@@ -53,16 +46,12 @@ opam switch ${OCAMLVER}
 eval `opam config env`
 
 # Build and dispatch a server application
-cd ./${SERVERPATH}
+cd ${SERVERPATH}
 make clean
-mirage configure --interface 0 -t ${PLATFORM}
+mirage configure -t ${PLATFORM}
 make
 cd ${CURRENT_DIR}
-
-sed -e s@KERNELPATH@${BASEDIR}/${SERVERBIN}@ ./template/${SERVERXML} > ./${SERVERXML}
-scp ./${SERVERPATH}/${SERVERBIN} ${USER}@${SERVERADDR}:${BASEDIR}/
-SERVERLOG="${OCAMLVER}_${PLATFORM}_${APP}_server.log"
-${VIRSH_S} create ./${SERVERXML}
+${CMD_S} &
 
 # Dispatch a client side MirageOS VM repeatedly
 JSONLOG="./${OCAMLVER}_${PLATFORM}_${APP}.json"
@@ -76,11 +65,9 @@ echo -n "{
 CLIENTLOG="${OCAMLVER}_${PLATFORM}_${APP}_client.log"
 echo -n '' > ./${CLIENTLOG}
 
-sed -e s@KERNELPATH@${BASEDIR}/${CLIENTBIN}@ ./template/${CLIENTXML} > ./${CLIENTXML}
-
 cd ${CLIENTPATH}
 make clean
-mirage configure --interface 0 -t ${PLATFORM}
+mirage configure -t ${PLATFORM}
 cd ${CURRENT_DIR}
 
 for BUF in ${BUFSIZE}
@@ -89,13 +76,13 @@ do
         sed -i -e "s/let\ blen\ =\ [0-9]*/let blen = ${BUF}/" ./unikernel.ml
         make
         cd ${CURRENT_DIR}
-        scp ./${CLIENTPATH}/${CLIENTBIN} ${USER}@${CLIENTADDR}:${BASEDIR}/
 
         echo -n "{ \"bufsize\": ${BUF}, \"throughput\": [" >> ./${JSONLOG}
         for i in $(seq 1 ${ITERATIONS});
         do
                 echo "***** Testing iperf: Buffer size ${BUF}, ${i}/${ITERATIONS} *****"
-                ${VIRSH_C} create ./${CLIENTXML} --console >> ${CLIENTLOG}
+				echo "${CURRENT_DIR}/${CLIENTPATH}"
+                ${CMD_C} >> ${CLIENTLOG}
                 TP=`sed -e 's/^M/\n/g' ./${CLIENTLOG} | grep Throughput | tail -n 1 | cut -d' ' -f 10`
                 echo -n "${TP}," >> ./${JSONLOG}
         done
@@ -108,5 +95,4 @@ sed -i -e 's/,\]/]/g' ${JSONLOG}
 cat ./${JSONLOG} | jq
 
 # Destroy the server application
-${VIRSH_S} destroy server
-
+killall ukvm-bin

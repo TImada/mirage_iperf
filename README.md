@@ -1,20 +1,47 @@
 # mirage_iperf
-iperf like tool on MirageOS
+iperf tool on MirageOS
 
 ## Description
 This program is a network performance measurement tool on MirageOS based on the test iperf implementation included in mirage-tcpip (https://github.com/mirage/mirage-tcpip). You can measure the TCP throughput between two different MirageOS VMs by this tool.
 
 ## Requirement
-MirageOS and hypervisor software(Xen or QEMU/KVM) are required.
-Libvirt with virsh(https://libvirt.org/) and jq (https://stedolan.github.io/jq/) are also required if you conduct an automated measurement framework provided by `iperf_run.sh`
+- MirageOS
+- Hypervisor software(Xen or QEMU/KVM)
+- Libvirt with virsh(https://libvirt.org/) and jq (https://stedolan.github.io/jq/)  
+(if you conduct an automated measurement framework provided by `iperf_run.sh` or `iperf_ukvm_run.sh`)
 
 ## Usage
-### Usual
-1. Compile a server side program in `iperf_server` and a client side program in `iperf_client`.
-2. Launch the server side at first, then the client side.
+### Step by step
+1. Check your target path.  
+TCP client in `iperf_client`, TCP server in `iperf_server`  
+UDP client in `iperf_udp_client`, UDP server in `iperf_udp_server`
+2. Edit `total_size`(=total data size to be sent) and `blen`(=sender buffer size) in unikernel.ml of your target client program.
+3. Compile your target programs.  
+4. Launch the server side at first, then the client side.
 
 ### Automated measurement
-1. Modify domain xml files in ./template/ so that they can use a network bridge on your environment. The default bridge is `vmbr0`.  
-2. Modify parameters in `iperf_run.sh` so that it can be used on your environment.  
-3. Execute `./iperf_run xen /path/to/dir` if you want to launch the client and server side programs at `/path/to/dir` on Xen-based physical servers. "virtio" can be used for QEMU/KVM-based physical servers.
+- Xen or QEMU/KVM
+  1. Modify domain xml files in ./template/ so that they can use a network bridge on your environment. The default bridge is `vmbr0`.  
+  2. Modify parameters in `iperf_run.sh` so that it can be used on your environment.  
+  `CLIENTADDR` : A host IP for libvirt where you want to run a client side VM
+  `SERVERADDR` : A host IP for libvirt where you want to run a server side VM  
+  `USER` : A username you want to use  
+  `OCAMLVER` : An OCaml compiler version you want to use
+  `BUFSIZE` : Sender buffer size  
+  `ITERATIONS` : # of measurements for each sender buffer size
+  3. Execute `./iperf_run xen tcp /path/to/dir` if you want to launch the TCP client and server side programs at `/path/to/dir` on Xen-based physical servers.  
+  1st argument : `xen` or `virtio`  
+  2nd argument : `tcp` or `udp`  
+  3rd argument : `/path/to/dir` (where you want to put the server and client kernel files)  
+- ukvm
+  1. Create and configure two tap devices on your hosts and check if they can communicate each other.
+  2. Modify parameters in `iperf_ukvm_run`. The default tap devices are `tap0` and `tap1` for the server and client respectively.
+  3. Execute `./iperf_ukvm_run.sh tcp` if you want to launch the TCP client and server side programs.  
+  1st argument : `tcp` or `udp`
 
+## Note
+- UDP-based programs have partly compatible with the C-based iperf. This is just for testing. (The programs were tested with iperf-2.0.9)  
+  - C-based client with MirageOS-based server  
+  __Note that you can check only the bytes transferred and bit rate.__ The jitter and packet loss rate fields (= indicated as "Server report:" in the client side output) are invalid as the server side does not measure them.  
+  - MirageOS-side client with C-based client  
+  No special considerations needed.
