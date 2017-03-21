@@ -40,7 +40,7 @@ UDP client in `iperf_udp_client`, UDP server in `iperf_udp_server`
   1st argument : `tcp` or `udp`
 
 ## Note
-- UDP-based programs have partly compatible with the C-based iperf. This is just for testing. (The programs were tested with iperf-2.0.9)  
+- UDP-based programs are partly compatible with the C-based iperf. This is just for testing. (The programs were tested with iperf-2.0.9)  
   - C-based client with MirageOS-based server  
   __Note that you can check only the bytes transferred and bit rate.__ The jitter and packet loss rate fields (= indicated as "Server report:" in the client side output) are invalid as the server side does not measure them.  
   - MirageOS-side client with C-based client  
