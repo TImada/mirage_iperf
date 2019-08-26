@@ -24,13 +24,13 @@ sig
   type 'a io
   type id
   module Stackv4 : Mirage_stack_lwt.V4
-  (** Create a new backend *)
+  (* Create a new backend *)
   val create_backend : unit -> backend
-  (** Create a new stack connected to an existing backend *)
+  (* Create a new stack connected to an existing backend *)
   val create_stack : backend -> Ipaddr.V4.t -> int -> Ipaddr.V4.t option -> Stackv4.t Lwt.t
-  (** Add a listener function to the backend *)
+  (* Add a listener function to the backend *)
   val create_backend_listener : backend -> (buffer -> unit io) -> id
-  (** Disable a listener function *)
+  (* Disable a listener function *)
   val disable_backend_listener : backend -> id -> unit io
 end
 
@@ -66,6 +66,7 @@ module VNETIF_STACK ( B : Vnetif_backends.Backend) (Time : Mirage_types_lwt.TIME
 
   let create_backend_listener backend listenf =
     match (B.register backend) with
+    | Error _ -> assert false
     | Ok id -> (B.set_listen_fn backend id listenf); id
 
   let disable_backend_listener backend id =

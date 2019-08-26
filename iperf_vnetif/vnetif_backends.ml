@@ -14,14 +14,12 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 
-open Lwt.Infix
-
 module type Backend = sig
   include Vnetif.BACKEND
   val create : unit -> t
 end
 
-(** This backend delivers all packets unmodified *)
+(* This backend delivers all packets unmodified *)
 module Basic : Backend = struct
   module X = Basic_backend.Make
   include X
