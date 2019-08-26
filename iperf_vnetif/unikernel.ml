@@ -31,9 +31,9 @@ module Main (Time : Mirage_types_lwt.TIME) = struct
     if blen <= (String.length msg) then blen
     else (String.length msg)
 
-  let print_data st ts_now =
+  let print_data (st:stats_c) ts_now =
     let duration = Int64.sub ts_now st.start_time in
-    let rate = (Int64.float_of_bits st.bytes) /. (Int64.float_of_bits duration) *. 1000. *. 1000. *. 1000. in
+    let rate = (Int64.to_float st.bytes) /. (Int64.to_float duration) *. 1000. *. 1000. *. 1000. in
     Logs.info (fun f -> f  "iperf client: Duration = %.0Lu [ns] (start_t = %.0Lu, end_t = %.0Lu),  Data received = %Ld [bytes], Throughput = %.2f [bytes/sec]" duration st.start_time ts_now st.bytes rate);
     Logs.info (fun f -> f  "iperf client: Throughput = %.2f [MBs/sec]"  (rate /. 1000000.));
     Lwt.return_unit
@@ -71,18 +71,16 @@ module Main (Time : Mirage_types_lwt.TIME) = struct
     iperftx flow >>= fun () ->
     Lwt.return_unit
 
-  let iperf clock flow =
+  let iperf flow =
     (* debug is too much for us here *)
     Logs.set_level ~all:true (Some Logs.Info);
     Logs.info (fun f -> f  "iperf server: Received connection.");
-    let t0 = Mclock.elapsed_ns clock in
     let st_server = {
       bytes=0L;
     } in
     let rec iperf_h flow =
       V.Stackv4.TCPV4.read flow >|= Rresult.R.get_ok >>= function
       | `Eof ->
-        let ts_now = Mclock.elapsed_ns clock in
         V.Stackv4.TCPV4.close flow >>= fun () ->
         Logs.info (fun f -> f  "iperf server: Done - closed connection.");
         Lwt.return_unit
@@ -97,7 +95,6 @@ module Main (Time : Mirage_types_lwt.TIME) = struct
     Lwt.return_unit
 
   let start _time =
-    Time.sleep_ns (Duration.of_sec 1) >>= fun () -> (* Give server 1.0 s to call listen *)
     Mclock.connect () >>= fun clock ->
     Lwt.pick [
 
@@ -124,7 +121,7 @@ module Main (Time : Mirage_types_lwt.TIME) = struct
       Logs.info (fun f -> f "iperf server: Port number: %d" server_port);
 
       V.create_stack backend server_ip netmask gw >>= fun server_s ->
-      V.Stackv4.listen_tcpv4 server_s ~port:server_port (fun flow -> iperf clock flow);
+      V.Stackv4.listen_tcpv4 server_s ~port:server_port (fun flow -> iperf flow);
       V.Stackv4.listen server_s
     );
 
