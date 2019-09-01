@@ -20,8 +20,6 @@ module Main (S: Mirage_types_lwt.STACKV4) = struct
     Lwt.return_unit
 
   let iperf clock flow =
-    (* debug is too much for us here *)
-    Logs.set_level ~all:true (Some Logs.Info);
     Logs.info (fun f -> f  "iperf server: Received connection.");
     let t0 = Mclock.elapsed_ns clock in
     let st = {
@@ -59,4 +57,3 @@ module Main (S: Mirage_types_lwt.STACKV4) = struct
    S.listen s
 
 end
-

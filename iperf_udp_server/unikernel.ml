@@ -38,7 +38,7 @@ module Main (S: Mirage_types_lwt.STACKV4) = struct
   (* main server function *)
   let iperf clock s src_ip src_port st buf =
     let l = Cstruct.len buf in
-    let id = EndianBigstring.BigEndian.get_int32 buf.buffer 42 in
+    let id = EndianBigstring.BigEndian.get_int32 buf.Cstruct.buffer 42 in
 
     (* Received a packet to start a measurement *)
     if (Int32.compare id start_id) = 0 then
@@ -91,10 +91,9 @@ module Main (S: Mirage_types_lwt.STACKV4) = struct
     } in
 
     Mclock.connect () >>= fun clock ->
-    S.listen_udpv4 s ~port:server_port (fun ~src ~dst ~src_port buf ->
+    S.listen_udpv4 s ~port:server_port (fun ~src ~dst:_ ~src_port buf ->
       iperf clock s src src_port st buf
     );
     S.listen s
 
 end
-
