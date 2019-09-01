@@ -131,7 +131,7 @@ module Main (S: Mirage_types_lwt.STACKV4) (Time : Mirage_types_lwt.TIME) = struc
 
   let start s _time =
     Time.sleep_ns (Duration.of_sec 1) >>= fun () -> (* Give server 1.0 s to call listen *)
-    S.listen_udpv4 s ~port:server_port (fun ~src ~dst ~src_port buf ->
+    S.listen_udpv4 s ~port:server_port (fun ~src:_ ~dst:_ ~src_port:_ buf ->
       Logs.info (fun f -> f "iperf client: %.0Lu bytes received on the server side." (Cstruct.BE.get_uint64 buf 16));
       Lwt.return_unit
     );
