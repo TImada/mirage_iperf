@@ -8,7 +8,7 @@ type stats = {
 
 module Main (S: Mirage_types_lwt.STACKV4) (Time : Mirage_types_lwt.TIME) = struct
 
-  let server_ip = Ipaddr.V4.of_string_exn "192.168.122.100"
+  let server_ip = Ipaddr.V4.of_string_exn "192.168.122.10"
   let server_port = 5001
   let total_size = 100_000_000
   let blen = 1024

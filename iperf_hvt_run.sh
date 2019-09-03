@@ -16,10 +16,15 @@
 
 # Parameters
 BUFSIZE="64 128 256 512 1024 2048"
-OCAMLVER="4.03.0"
+OCAMLVER="4.07.0"
 ITERATIONS="10"
 C_TAP="tap1"
 S_TAP="tap0"
+S_IP="192.168.122.10"
+S_MASK="24"
+C_IP="192.168.122.20"
+C_MASK="24"
+GW_IP="192.168.122.1"
 
 # The followings should not be modified
 GUEST="Mirage"
@@ -62,7 +67,7 @@ eval `opam config env`
 # Build and dispatch a server application
 cd ${SERVERPATH}
 make clean
-mirage configure -t ${PLATFORM}
+mirage configure -t ${PLATFORM} --ipv4=${S_IP}/${S_MASK} --ipv4-gateway=${GW_IP}
 make
 cd ${CURRENT_DIR}
 ${CMD_S} &
@@ -81,7 +86,7 @@ echo -n '' > ./${CLIENTLOG}
 
 cd ${CLIENTPATH}
 make clean
-mirage configure -t ${PLATFORM}
+mirage configure -t ${PLATFORM} --ipv4=${C_IP}/${C_MASK} --ipv4-gateway=${GW_IP}
 cd ${CURRENT_DIR}
 
 for BUF in ${BUFSIZE}
