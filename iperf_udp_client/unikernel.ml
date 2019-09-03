@@ -109,7 +109,6 @@ module Main (S: Mirage_types_lwt.STACKV4) (Time : Mirage_types_lwt.TIME) = struc
           loop (-1) body st
         else begin
           set_id a n >>= fun () ->
-          Logs.info(fun f -> f "hogehoge %d\n" n);
           write_and_check dest_ip dport udp a >>= fun () ->
           st.bytes <- (Int64.add st.bytes (Int64.of_int (Cstruct.len a)));
           loop (num + 1) body st

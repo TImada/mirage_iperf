@@ -24,7 +24,7 @@ S_TAP="tap0"
 # The followings should not be modified
 GUEST="Mirage"
 NET="--net="
-PLATFORM="ukvm"
+PLATFORM="hvt"
 PROTO=${1}
 
 # Check a selected protocol
@@ -46,9 +46,9 @@ SERVERBIN="${APP}_server.${PLATFORM}"
 
 # Check the arguments provided
 case ${PLATFORM} in
-        "ukvm" )
-                CMD_C="./${CLIENTPATH}/ukvm-bin ${NET}${C_TAP} ./${CLIENTPATH}/${CLIENTBIN}";
-                CMD_S="./${SERVERPATH}/ukvm-bin ${NET}${S_TAP} ./${SERVERPATH}/${SERVERBIN}";
+        "hvt" )
+                CMD_C="./${CLIENTPATH}/solo5-hvt ${NET}${C_TAP} ./${CLIENTPATH}/${CLIENTBIN}";
+                CMD_S="./${SERVERPATH}/solo5-hvt ${NET}${S_TAP} ./${SERVERPATH}/${SERVERBIN}";
         ;;
         * ) echo "Invalid hypervisor selected"; exit
 esac
@@ -109,4 +109,4 @@ sed -i -e 's/,\]/]/g' ${JSONLOG}
 cat ./${JSONLOG} | jq
 
 # Destroy the server application
-killall ukvm-bin
+killall solo5-hvt
