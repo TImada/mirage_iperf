@@ -25,7 +25,7 @@ type stats = {
   mutable last_time: int64;
 }
 
-module Main (S: Mirage_types_lwt.STACKV4) (Time : Mirage_types_lwt.TIME) = struct
+module Main (S: Tcpip.Stack.V4) (Time : Mirage_time.S) (Mclock : Mirage_clock.MCLOCK) = struct
 
   let server_ip = Ipaddr.V4.of_string_exn "192.168.122.10"
   let server_port = 5001
@@ -52,7 +52,7 @@ module Main (S: Mirage_types_lwt.STACKV4) (Time : Mirage_types_lwt.TIME) = struc
 
   (* set a UDP diagram ID for the C-based iperf *)
   let set_id buf num =
-    if (Cstruct.len buf) = 0 then
+    if (Cstruct.length buf) = 0 then
       Lwt.return_unit 
     else
       begin
@@ -71,7 +71,7 @@ module Main (S: Mirage_types_lwt.STACKV4) (Time : Mirage_types_lwt.TIME) = struc
     (* Create data to be sent *)
     let a = Cstruct.sub (Io_page.(to_cstruct (get 1))) 0 mlen in
     Cstruct.blit_from_string msg 0 a 0 mlen;
-    Cstruct.blit zeros 0 a 0 (Cstruct.len zeros);
+    Cstruct.blit zeros 0 a 0 (Cstruct.length zeros);
 
     (* Loop function for packet sending *)
     let rec loop num body st = 
@@ -88,19 +88,19 @@ module Main (S: Mirage_types_lwt.STACKV4) (Time : Mirage_types_lwt.TIME) = struc
           set_id a (-1 * body) >>= fun () ->
           write_and_check dest_ip dport udp a >>= fun () ->
           st.last_time <- Mclock.elapsed_ns clock; 
-          st.bytes <- (Int64.add st.bytes (Int64.of_int (Cstruct.len a)));
+          st.bytes <- (Int64.add st.bytes (Int64.of_int (Cstruct.length a)));
           Lwt.return_unit
         end
         else
         begin
           set_id a body >>= fun () ->
           write_and_check dest_ip dport udp a >>= fun () ->
-          st.bytes <- (Int64.add st.bytes (Int64.of_int (Cstruct.len a)));
+          st.bytes <- (Int64.add st.bytes (Int64.of_int (Cstruct.length a)));
           let a = Cstruct.sub a 0 reminder in
           set_id a (-1 * (body + 1)) >>= fun () ->
           write_and_check dest_ip dport udp a >>= fun () ->
           st.last_time <- Mclock.elapsed_ns clock; 
-          st.bytes <- (Int64.add st.bytes (Int64.of_int (Cstruct.len a)));
+          st.bytes <- (Int64.add st.bytes (Int64.of_int (Cstruct.length a)));
           Lwt.return_unit
         end
       (* Usual packet sending *)
@@ -110,7 +110,7 @@ module Main (S: Mirage_types_lwt.STACKV4) (Time : Mirage_types_lwt.TIME) = struc
         else begin
           set_id a n >>= fun () ->
           write_and_check dest_ip dport udp a >>= fun () ->
-          st.bytes <- (Int64.add st.bytes (Int64.of_int (Cstruct.len a)));
+          st.bytes <- (Int64.add st.bytes (Int64.of_int (Cstruct.length a)));
           loop (num + 1) body st
         end
     in
@@ -128,15 +128,14 @@ module Main (S: Mirage_types_lwt.STACKV4) (Time : Mirage_types_lwt.TIME) = struc
     Time.sleep_ns (Duration.of_sec 3) >>= fun () ->
     Lwt.return_unit
 
-  let start s _time =
+  let start s _time _clock =
     Time.sleep_ns (Duration.of_sec 1) >>= fun () -> (* Give server 1.0 s to call listen *)
-    S.listen_udpv4 s ~port:server_port (fun ~src:_ ~dst:_ ~src_port:_ buf ->
+    S.UDPV4.listen (S.udpv4 s) ~port:server_port (fun ~src:_ ~dst:_ ~src_port:_ buf ->
       Logs.info (fun f -> f "iperf client: %.0Lu bytes received on the server side." (Cstruct.BE.get_uint64 buf 16));
       Lwt.return_unit
     );
     Lwt.async (fun () -> S.listen s);
     let udp = S.udpv4 s in
-    Mclock.connect () >>= fun clock ->
-    iperfclient total_size server_ip server_port udp clock
+    iperfclient total_size server_ip server_port udp _clock
 
 end

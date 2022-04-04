@@ -22,9 +22,12 @@ open Mirage
 let sv4 =
   generic_stackv4 default_network
 
-let main = foreign "Unikernel.Main" (stackv4 @-> time @-> job)
+let packages =
+  [ package "rresult"; package "io-page"; package "duration" ]
+
+let main = main ~packages "Unikernel.Main" (stackv4 @-> time @-> mclock @-> job)
 
 let () =
   register "iperf_udp_client" [
-    main $ sv4 $ default_time
+    main $ sv4 $ default_time $ default_monotonic_clock
   ]

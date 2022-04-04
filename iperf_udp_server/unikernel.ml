@@ -25,7 +25,7 @@ type stats = {
   mutable end_time: int64
 }
 
-module Main (S: Mirage_types_lwt.STACKV4) = struct
+module Main (S: Tcpip.Stack.V4) (Mclock : Mirage_clock.MCLOCK) = struct
 
   let server_port = 5001
 
@@ -37,7 +37,7 @@ module Main (S: Mirage_types_lwt.STACKV4) = struct
 
   (* main server function *)
   let iperf clock s src_ip src_port st buf =
-    let l = Cstruct.len buf in
+    let l = Cstruct.length buf in
     let id = EndianBigstring.BigEndian.get_int32 buf.Cstruct.buffer 42 in
 
     (* Received a packet to start a measurement *)
@@ -78,7 +78,7 @@ module Main (S: Mirage_types_lwt.STACKV4) = struct
       Lwt.return_unit
     end
 
-  let start s =
+  let start s _clock =
     let ips = List.map Ipaddr.V4.to_string (S.IPV4.get_ip (S.ipv4 s)) in
     (* debug is too much for us here *)
     Logs.set_level ~all:true (Some Logs.Info);
@@ -90,9 +90,8 @@ module Main (S: Mirage_types_lwt.STACKV4) = struct
       bytes=0L; start_time=0L; end_time=0L
     } in
 
-    Mclock.connect () >>= fun clock ->
-    S.listen_udpv4 s ~port:server_port (fun ~src ~dst:_ ~src_port buf ->
-      iperf clock s src src_port st buf
+    S.UDPV4.listen (S.udpv4 s) ~port:server_port (fun ~src ~dst:_ ~src_port buf ->
+      iperf _clock s src src_port st buf
     );
     S.listen s
 

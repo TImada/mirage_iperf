@@ -6,7 +6,7 @@ type stats = {
   mutable last_time: int64;
 }
 
-module Main (S: Mirage_types_lwt.STACKV4) (Time : Mirage_types_lwt.TIME) = struct
+module Main (S: Tcpip.Stack.V4) (Time : Mirage_time.S) (Mclock : Mirage_clock.MCLOCK) = struct
 
   let server_ip = Ipaddr.V4.of_string_exn "192.168.122.10"
   let server_port = 5001
@@ -65,11 +65,10 @@ module Main (S: Mirage_types_lwt.STACKV4) (Time : Mirage_types_lwt.TIME) = struc
     iperftx flow >>= fun () ->
     Lwt.return_unit
 
-  let start s _time =
+  let start s _time _clock =
     Time.sleep_ns (Duration.of_sec 1) >>= fun () -> (* Give server 1.0 s to call listen *)
     Lwt.async (fun () -> S.listen s);
-    Mclock.connect () >>= fun clock ->
-    iperfclient s total_size server_ip server_port clock
+    iperfclient s total_size server_ip server_port _clock
 
 end
 

@@ -6,7 +6,7 @@ type stats = {
   mutable last_time: int64;
 }
 
-module Main (S: Mirage_types_lwt.STACKV4) = struct
+module Main (S: Tcpip.Stack.V4) (Mclock : Mirage_clock.MCLOCK) = struct
 
   let iperf_port = 5001
 
@@ -36,7 +36,7 @@ module Main (S: Mirage_types_lwt.STACKV4) = struct
         Lwt.return_unit
       | `Data data ->
         begin
-          let l = Cstruct.len data in
+          let l = Cstruct.length data in
           st.bytes <- (Int64.add st.bytes (Int64.of_int l));
           iperf_h flow
         end
@@ -44,15 +44,14 @@ module Main (S: Mirage_types_lwt.STACKV4) = struct
     iperf_h flow >>= fun () ->
     Lwt.return_unit
 
- let start s =
+ let start s _clock =
    let ips = List.map Ipaddr.V4.to_string (S.IPV4.get_ip (S.ipv4 s)) in
    Logs.info (fun f -> f "iperf server process started:");
    Logs.info (fun f -> f "IP address: %s" (String.concat "," ips));
    Logs.info (fun f -> f "Port number: %d" iperf_port);
 
-   Mclock.connect () >>= fun clock ->
-   S.listen_tcpv4 s ~port:iperf_port (fun flow ->
-     iperf clock flow
+   S.TCPV4.listen (S.tcpv4 s) ~port:iperf_port (fun flow ->
+     iperf _clock flow
    );
    S.listen s
 

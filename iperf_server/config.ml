@@ -3,9 +3,11 @@ open Mirage
 let sv4 =
   generic_stackv4 default_network
 
-let main = foreign "Unikernel.Main" (stackv4 @-> job)
+let packages = [ package "rresult" ]
+
+let main = main ~packages "Unikernel.Main" (stackv4 @-> mclock @-> job)
 
 let () =
   register "iperf_server" [
-    main $ sv4
+    main $ sv4 $ default_monotonic_clock
   ]
