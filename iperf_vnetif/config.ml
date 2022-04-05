@@ -1,13 +1,12 @@
 open Mirage
 
-let main =
-  let packages = [ package ~sublibs:["ipv4"; "icmpv4"; "tcp"; "udp"; "stack-direct"] "tcpip"; package "ethernet"; package "arp-mirage"; package "duration"; package "mirage-vnetif" ; package "mirage-random-stdlib" ] in
-  foreign
-    ~packages
-    "Unikernel.Main" (time @-> job)
+let packages = 
+  [ package "rresult"; package "io-page"; package "duration"; package "mirage-vnetif"; package "mirage-vnetif-stack" ]
+
+let main = main ~packages "Unikernel.Main" (time @-> mclock @-> random @-> job)
 
 let () =
   register "iperf_vnetif" [
-    main $ default_time
+    main $ default_time $ default_monotonic_clock $ default_random
   ]
 
