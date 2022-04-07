@@ -8,7 +8,7 @@ This program is a network performance measurement tool on MirageOS based on the 
 - MirageOS
 - Hypervisor software(Xen or QEMU/KVM)
 - Libvirt with virsh(https://libvirt.org/) and jq (https://stedolan.github.io/jq/)  
-(if you conduct an automated measurement framework provided by `iperf_run.sh` or `iperf_ukvm_run.sh`)
+(if you conduct an automated measurement framework provided by `iperf_run.sh` or `iperf_hvm_run.sh`)
 
 ## Usage
 ### Step by step
@@ -33,10 +33,10 @@ UDP client in `iperf_udp_client`, UDP server in `iperf_udp_server`
   1st argument : `xen` or `virtio`  
   2nd argument : `tcp` or `udp`  
   3rd argument : `/path/to/dir` (where you want to put the server and client kernel files)  
-- ukvm
+- hvt
   1. Create and configure two tap devices on your hosts and check if they can communicate each other.
-  2. Modify parameters in `iperf_ukvm_run`. The default tap devices are `tap0` and `tap1` for the server and client respectively.
-  3. Execute `./iperf_ukvm_run.sh tcp` if you want to launch the TCP client and server side programs.  
+  2. Modify parameters in `iperf_hvt_run.sh`. The default tap devices are `tap0` and `tap1` for the server and client respectively.
+  3. Execute `./iperf_hvt_run.sh tcp` if you want to launch the TCP client and server side programs.  
   1st argument : `tcp` or `udp`
 
 ## Note
