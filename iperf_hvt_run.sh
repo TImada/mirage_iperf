@@ -16,7 +16,7 @@
 
 # Parameters
 BUFSIZE="64 128 256 512 1024 2048"
-OCAMLVER="4.07.0"
+OCAMLVER="4.13.0"
 ITERATIONS="10"
 C_TAP="tap1"
 S_TAP="tap0"
@@ -28,7 +28,7 @@ GW_IP="192.168.122.1"
 
 # The followings should not be modified
 GUEST="Mirage"
-NET="--net="
+NET="--net:service="
 PLATFORM="hvt"
 PROTO=${1}
 
@@ -52,8 +52,8 @@ SERVERBIN="${APP}_server.${PLATFORM}"
 # Check the arguments provided
 case ${PLATFORM} in
         "hvt" )
-                CMD_C="./${CLIENTPATH}/solo5-hvt ${NET}${C_TAP} ./${CLIENTPATH}/${CLIENTBIN}";
-                CMD_S="./${SERVERPATH}/solo5-hvt ${NET}${S_TAP} ./${SERVERPATH}/${SERVERBIN}";
+                CMD_C="solo5-hvt ${NET}${C_TAP} -- ./${CLIENTPATH}/dist/${CLIENTBIN}";
+                CMD_S="solo5-hvt ${NET}${S_TAP} -- ./${SERVERPATH}/dist/${SERVERBIN}";
         ;;
         * ) echo "Invalid hypervisor selected"; exit
 esac
