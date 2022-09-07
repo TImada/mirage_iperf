@@ -15,9 +15,19 @@ This program is a network performance measurement tool on MirageOS based on the 
 1. Check your target path.  
 TCP client in `iperf_client`, TCP server in `iperf_server`  
 UDP client in `iperf_udp_client`, UDP server in `iperf_udp_server`
-2. Edit `total_size`(=total data size to be sent) and `blen`(=sender buffer size) in unikernel.ml of your target client program.
-3. Compile your target programs.  
-4. Launch the server side at first, then the client side.
+2. Edit the following variables in unikernel.ml of your target client program.
+    - `server_ip` (= server IP address)
+    - `total_size` (= total data size to be sent)
+    - `blen` (= sender buffer size)
+3. Configure your target programs. You must assign an IP address for each side in this step.
+```
+(client side using hvt)
+$ mirage configure --ipv4=192.168.122.11/24 -t hvt
+(server side using hvt)
+$ mirage configure --ipv4=192.168.122.10/24 -t hvt
+```
+4. Compile your target programs.
+5. Launch the server side at first, then the client side.
 
 ### Automated measurement
 - Xen or QEMU/KVM
