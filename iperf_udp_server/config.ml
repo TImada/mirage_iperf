@@ -19,15 +19,15 @@
 
 open Mirage
 
-let sv4 =
-  generic_stackv4 default_network
+let sv4v6 =
+  generic_stackv4v6 default_network
 
 let packages =
   [ package "rresult" ]
 
-let main = main ~packages "Unikernel.Main" (stackv4 @-> mclock @-> job)
+let main = main ~packages "Unikernel.Main" (stackv4v6 @-> mclock @-> job)
 
 let () =
   register "iperf_udp_server" [
-    main $ sv4 $ default_monotonic_clock
+    main $ sv4v6 $ default_monotonic_clock
   ]

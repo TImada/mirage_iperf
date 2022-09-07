@@ -6,9 +6,9 @@ type stats = {
   mutable last_time: int64;
 }
 
-module Main (S: Tcpip.Stack.V4) (Time : Mirage_time.S) (Mclock : Mirage_clock.MCLOCK) = struct
+module Main (S: Tcpip.Stack.V4V6) (Time : Mirage_time.S) (Mclock : Mirage_clock.MCLOCK) = struct
 
-  let server_ip = Ipaddr.V4.of_string_exn "192.168.122.10"
+  let server_ip = Ipaddr.of_string_exn "192.168.122.10"
   let server_port = 5001
   let total_size = 100_000_000
   let blen = 1024
@@ -28,15 +28,15 @@ module Main (S: Tcpip.Stack.V4) (Time : Mirage_time.S) (Mclock : Mirage_clock.MC
     Lwt.return_unit
 
   let err_connect ip port () =
-    let ip  = Ipaddr.V4.to_string ip in
+    let ip  = Ipaddr.to_string ip in
     Logs.info (fun f -> f "Unable to connect to %s:%d" ip port);
     Lwt.return_unit
 
   let write_and_check flow buf =
-    S.TCPV4.write flow buf >|= Rresult.R.get_ok
+    S.TCP.write flow buf >|= Rresult.R.get_ok
 
   let tcp_connect t (ip, port) =
-    S.TCPV4.create_connection t (ip, port) >|= Rresult.R.get_ok
+    S.TCP.create_connection t (ip, port) >|= Rresult.R.get_ok
 
   let iperfclient s amt dest_ip dport clock =
     let iperftx flow =
@@ -58,10 +58,10 @@ module Main (S: Tcpip.Stack.V4) (Time : Mirage_time.S) (Mclock : Mirage_clock.MC
       st.bytes <- Int64.of_int total_size;
       print_data st tnow >>= fun () ->
       Logs.info (fun f -> f  "iperf client: Done.");
-      S.TCPV4.close flow
+      S.TCP.close flow
     in
-    Logs.info (fun f -> f  "Trying to connect to a server at %s:%d, buffer size = %d, protocol = tcp" (Ipaddr.V4.to_string server_ip) server_port mlen);
-    tcp_connect (S.tcpv4 s) (dest_ip, dport) >>= fun flow ->
+    Logs.info (fun f -> f  "Trying to connect to a server at %s:%d, buffer size = %d, protocol = tcp" (Ipaddr.to_string server_ip) server_port mlen);
+    tcp_connect (S.tcp s) (dest_ip, dport) >>= fun flow ->
     iperftx flow >>= fun () ->
     Lwt.return_unit
 

@@ -25,7 +25,7 @@ type stats = {
   mutable end_time: int64
 }
 
-module Main (S: Tcpip.Stack.V4) (Mclock : Mirage_clock.MCLOCK) = struct
+module Main (S: Tcpip.Stack.V4V6) (Mclock : Mirage_clock.MCLOCK) = struct
 
   let server_port = 5001
 
@@ -33,7 +33,7 @@ module Main (S: Tcpip.Stack.V4) (Mclock : Mirage_clock.MCLOCK) = struct
 
   (* packet sending *)
   let write_and_check ip port udp buf =
-    S.UDPV4.write ~src_port:server_port ~dst:ip ~dst_port:port udp buf >|= Rresult.R.get_ok
+    S.UDP.write ~src_port:server_port ~dst:ip ~dst_port:port udp buf >|= Rresult.R.get_ok
 
   (* main server function *)
   let iperf clock s src_ip src_port st buf =
@@ -66,7 +66,7 @@ module Main (S: Tcpip.Stack.V4) (Mclock : Mirage_clock.MCLOCK) = struct
       Cstruct.BE.set_uint32 response 24 (Int64.to_int32 time_sec);
       Cstruct.BE.set_uint32 response 28 (Int64.to_int32 time_usec);
 
-      let udp = S.udpv4 s in
+      let udp = S.udp s in
       write_and_check src_ip src_port udp response >>= fun () ->
       st.bytes <- 0L;
       Lwt.return_unit
@@ -79,7 +79,7 @@ module Main (S: Tcpip.Stack.V4) (Mclock : Mirage_clock.MCLOCK) = struct
     end
 
   let start s _clock =
-    let ips = List.map Ipaddr.V4.to_string (S.IPV4.get_ip (S.ipv4 s)) in
+    let ips = List.map Ipaddr.to_string (S.IP.get_ip (S.ip s)) in
     (* debug is too much for us here *)
     Logs.set_level ~all:true (Some Logs.Info);
     Logs.info (fun f -> f "iperf_udp_server: process started:");
@@ -90,7 +90,7 @@ module Main (S: Tcpip.Stack.V4) (Mclock : Mirage_clock.MCLOCK) = struct
       bytes=0L; start_time=0L; end_time=0L
     } in
 
-    S.UDPV4.listen (S.udpv4 s) ~port:server_port (fun ~src ~dst:_ ~src_port buf ->
+    S.UDP.listen (S.udp s) ~port:server_port (fun ~src ~dst:_ ~src_port buf ->
       iperf _clock s src src_port st buf
     );
     S.listen s

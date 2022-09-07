@@ -6,7 +6,7 @@ type stats = {
   mutable last_time: int64;
 }
 
-module Main (S: Tcpip.Stack.V4) (Mclock : Mirage_clock.MCLOCK) = struct
+module Main (S: Tcpip.Stack.V4V6) (Mclock : Mirage_clock.MCLOCK) = struct
 
   let iperf_port = 5001
 
@@ -26,12 +26,12 @@ module Main (S: Tcpip.Stack.V4) (Mclock : Mirage_clock.MCLOCK) = struct
       bytes=0L; start_time = t0; last_time = t0
     } in
     let rec iperf_h flow =
-      S.TCPV4.read flow >|= Rresult.R.get_ok >>= function
+      S.TCP.read flow >|= Rresult.R.get_ok >>= function
       | `Eof ->
         let ts_now = Mclock.elapsed_ns clock in
         st.last_time <- st.start_time;
         print_data st ts_now >>= fun () ->
-        S.TCPV4.close flow >>= fun () ->
+        S.TCP.close flow >>= fun () ->
         Logs.info (fun f -> f  "iperf server: Done - closed connection.");
         Lwt.return_unit
       | `Data data ->
@@ -45,12 +45,12 @@ module Main (S: Tcpip.Stack.V4) (Mclock : Mirage_clock.MCLOCK) = struct
     Lwt.return_unit
 
  let start s _clock =
-   let ips = List.map Ipaddr.V4.to_string (S.IPV4.get_ip (S.ipv4 s)) in
+   let ips = List.map Ipaddr.to_string (S.IP.get_ip (S.ip s)) in
    Logs.info (fun f -> f "iperf server process started:");
    Logs.info (fun f -> f "IP address: %s" (String.concat "," ips));
    Logs.info (fun f -> f "Port number: %d" iperf_port);
 
-   S.TCPV4.listen (S.tcpv4 s) ~port:iperf_port (fun flow ->
+   S.TCP.listen (S.tcp s) ~port:iperf_port (fun flow ->
      iperf _clock flow
    );
    S.listen s

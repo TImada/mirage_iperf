@@ -25,9 +25,9 @@ type stats = {
   mutable last_time: int64;
 }
 
-module Main (S: Tcpip.Stack.V4) (Time : Mirage_time.S) (Mclock : Mirage_clock.MCLOCK) = struct
+module Main (S: Tcpip.Stack.V4V6) (Time : Mirage_time.S) (Mclock : Mirage_clock.MCLOCK) = struct
 
-  let server_ip = Ipaddr.V4.of_string_exn "192.168.122.10"
+  let server_ip = Ipaddr.of_string_exn "192.168.122.10"
   let server_port = 5001
   let client_port = 50001
   let total_size = 300_000_000
@@ -48,7 +48,7 @@ module Main (S: Tcpip.Stack.V4) (Time : Mirage_time.S) (Mclock : Mirage_clock.MC
     Lwt.return_unit
 
   let write_and_check ip port udp buf =
-    S.UDPV4.write ~src_port:client_port ~dst:ip ~dst_port:port udp buf >|= Rresult.R.get_ok
+    S.UDP.write ~src_port:client_port ~dst:ip ~dst_port:port udp buf >|= Rresult.R.get_ok
 
   (* set a UDP diagram ID for the C-based iperf *)
   let set_id buf num =
@@ -62,7 +62,7 @@ module Main (S: Tcpip.Stack.V4) (Time : Mirage_time.S) (Mclock : Mirage_clock.MC
 
   (* client function *)
   let iperfclient amt dest_ip dport udp clock =
-    Logs.info (fun f -> f  "iperf client: Trying to connect to a server at %s:%d, buffer size = %d, protocol = udp" (Ipaddr.V4.to_string server_ip) server_port mlen);
+    Logs.info (fun f -> f  "iperf client: Trying to connect to a server at %s:%d, buffer size = %d, protocol = udp" (Ipaddr.to_string server_ip) server_port mlen);
     Logs.info (fun f -> f  "iperf client: %.0d bytes data transfer initiated." amt);
     let zeros = Cstruct.create 40 in
     let body = amt / mlen in
@@ -130,12 +130,12 @@ module Main (S: Tcpip.Stack.V4) (Time : Mirage_time.S) (Mclock : Mirage_clock.MC
 
   let start s _time _clock =
     Time.sleep_ns (Duration.of_sec 1) >>= fun () -> (* Give server 1.0 s to call listen *)
-    S.UDPV4.listen (S.udpv4 s) ~port:server_port (fun ~src:_ ~dst:_ ~src_port:_ buf ->
+    S.UDP.listen (S.udp s) ~port:server_port (fun ~src:_ ~dst:_ ~src_port:_ buf ->
       Logs.info (fun f -> f "iperf client: %.0Lu bytes received on the server side." (Cstruct.BE.get_uint64 buf 16));
       Lwt.return_unit
     );
     Lwt.async (fun () -> S.listen s);
-    let udp = S.udpv4 s in
+    let udp = S.udp s in
     iperfclient total_size server_ip server_port udp _clock
 
 end
