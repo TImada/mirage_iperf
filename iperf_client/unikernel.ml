@@ -6,7 +6,7 @@ type stats = {
   mutable last_time: int64;
 }
 
-module Main (S: Tcpip.Stack.V4V6) (Time : Mirage_time.S) (Mclock : Mirage_clock.MCLOCK) = struct
+module Main (S: Tcpip.Stack.V4V6) = struct
 
   let server_ip = Ipaddr.of_string_exn "192.168.122.10"
   let server_port = 5001
@@ -38,7 +38,7 @@ module Main (S: Tcpip.Stack.V4V6) (Time : Mirage_time.S) (Mclock : Mirage_clock.
   let tcp_connect t (ip, port) =
     S.TCP.create_connection t (ip, port) >|= Rresult.R.get_ok
 
-  let iperfclient s amt dest_ip dport clock =
+  let iperfclient s amt dest_ip dport =
     let iperftx flow =
       Logs.info (fun f -> f  "iperf client: %.0d bytes data transfer initiated." amt);
       let a = Cstruct.sub (Io_page.(to_cstruct (get 1))) 0 mlen in
@@ -47,14 +47,14 @@ module Main (S: Tcpip.Stack.V4V6) (Time : Mirage_time.S) (Mclock : Mirage_clock.
         | 0 -> Lwt.return_unit
         | n -> write_and_check flow a >>= fun () -> loop (n-1)
       in
-      let t0 = Mclock.elapsed_ns clock in
+      let t0 = Mirage_mtime.elapsed_ns () in
       let st = {
         bytes=0L; start_time = t0; last_time = t0
       } in
       loop (amt / mlen) >>= fun () ->
       let a = Cstruct.sub a 0 (amt - (mlen * (amt/mlen))) in
       write_and_check flow a >>= fun () ->
-      let tnow = Mclock.elapsed_ns clock in
+      let tnow = Mirage_mtime.elapsed_ns () in
       st.bytes <- Int64.of_int total_size;
       print_data st tnow >>= fun () ->
       Logs.info (fun f -> f  "iperf client: Done.");
@@ -65,10 +65,10 @@ module Main (S: Tcpip.Stack.V4V6) (Time : Mirage_time.S) (Mclock : Mirage_clock.
     iperftx flow >>= fun () ->
     Lwt.return_unit
 
-  let start s _time _clock =
-    Time.sleep_ns (Duration.of_sec 1) >>= fun () -> (* Give server 1.0 s to call listen *)
+  let start s =
+    Mirage_sleep.ns (Duration.of_sec 1) >>= fun () -> (* Give server 1.0 s to call listen *)
     Lwt.async (fun () -> S.listen s);
-    iperfclient s total_size server_ip server_port _clock
+    iperfclient s total_size server_ip server_port
 
 end
 

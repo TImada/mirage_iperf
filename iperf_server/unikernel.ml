@@ -6,7 +6,7 @@ type stats = {
   mutable last_time: int64;
 }
 
-module Main (S: Tcpip.Stack.V4V6) (Mclock : Mirage_clock.MCLOCK) = struct
+module Main (S: Tcpip.Stack.V4V6) = struct
 
   let iperf_port = 5001
 
@@ -19,16 +19,16 @@ module Main (S: Tcpip.Stack.V4V6) (Mclock : Mirage_clock.MCLOCK) = struct
     st.bytes <- 0L;
     Lwt.return_unit
 
-  let iperf clock flow =
+  let iperf flow =
     Logs.info (fun f -> f  "iperf server: Received connection.");
-    let t0 = Mclock.elapsed_ns clock in
+    let t0 = Mirage_mtime.elapsed_ns () in
     let st = {
       bytes=0L; start_time = t0; last_time = t0
     } in
     let rec iperf_h flow =
       S.TCP.read flow >|= Rresult.R.get_ok >>= function
       | `Eof ->
-        let ts_now = Mclock.elapsed_ns clock in
+        let ts_now = Mirage_mtime.elapsed_ns () in
         st.last_time <- st.start_time;
         print_data st ts_now >>= fun () ->
         S.TCP.close flow >>= fun () ->
@@ -44,14 +44,14 @@ module Main (S: Tcpip.Stack.V4V6) (Mclock : Mirage_clock.MCLOCK) = struct
     iperf_h flow >>= fun () ->
     Lwt.return_unit
 
- let start s _clock =
-   let ips = List.map Ipaddr.to_string (S.IP.get_ip (S.ip s)) in
+ let start s =
+   let ips = List.map Ipaddr.Prefix.to_string (S.IP.configured_ips (S.ip s)) in
    Logs.info (fun f -> f "iperf server process started:");
    Logs.info (fun f -> f "IP address: %s" (String.concat "," ips));
    Logs.info (fun f -> f "Port number: %d" iperf_port);
 
    S.TCP.listen (S.tcp s) ~port:iperf_port (fun flow ->
-     iperf _clock flow
+     iperf flow
    );
    S.listen s
 

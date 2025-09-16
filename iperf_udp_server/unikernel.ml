@@ -25,7 +25,7 @@ type stats = {
   mutable end_time: int64
 }
 
-module Main (S: Tcpip.Stack.V4V6) (Mclock : Mirage_clock.MCLOCK) = struct
+module Main (S: Tcpip.Stack.V4V6) = struct
 
   let server_port = 5001
 
@@ -36,7 +36,7 @@ module Main (S: Tcpip.Stack.V4V6) (Mclock : Mirage_clock.MCLOCK) = struct
     S.UDP.write ~src_port:server_port ~dst:ip ~dst_port:port udp buf >|= Rresult.R.get_ok
 
   (* main server function *)
-  let iperf clock s src_ip src_port st buf =
+  let iperf s src_ip src_port st buf =
     let l = Cstruct.length buf in
     let id = EndianBigstring.BigEndian.get_int32 buf.Cstruct.buffer 42 in
 
@@ -44,13 +44,13 @@ module Main (S: Tcpip.Stack.V4V6) (Mclock : Mirage_clock.MCLOCK) = struct
     if (Int32.compare id start_id) = 0 then
     begin
       Logs.info (fun f -> f "iperf_udp_server: Started");
-      st.start_time <- Mclock.elapsed_ns clock;
+      st.start_time <- Mirage_mtime.elapsed_ns ();
       Lwt.return_unit
     end
     (* Received a packet to close the measurement *)
     else if (Int32.compare id start_id) < 0 then
     begin
-      st.end_time <- Mclock.elapsed_ns clock;
+      st.end_time <- Mirage_mtime.elapsed_ns ();
       st.bytes <- (Int64.add st.bytes (Int64.of_int l));
       let elapsed = Int64.sub st.end_time st.start_time in
       let time_sec = Int64.div elapsed 1000000000L in
@@ -78,8 +78,8 @@ module Main (S: Tcpip.Stack.V4V6) (Mclock : Mirage_clock.MCLOCK) = struct
       Lwt.return_unit
     end
 
-  let start s _clock =
-    let ips = List.map Ipaddr.to_string (S.IP.get_ip (S.ip s)) in
+  let start s =
+    let ips = List.map Ipaddr.Prefix.to_string (S.IP.configured_ips (S.ip s)) in
     (* debug is too much for us here *)
     Logs.set_level ~all:true (Some Logs.Info);
     Logs.info (fun f -> f "iperf_udp_server: process started:");
@@ -91,7 +91,7 @@ module Main (S: Tcpip.Stack.V4V6) (Mclock : Mirage_clock.MCLOCK) = struct
     } in
 
     S.UDP.listen (S.udp s) ~port:server_port (fun ~src ~dst:_ ~src_port buf ->
-      iperf _clock s src src_port st buf
+      iperf s src src_port st buf
     );
     S.listen s
 

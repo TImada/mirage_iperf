@@ -25,7 +25,7 @@ type stats = {
   mutable last_time: int64;
 }
 
-module Main (S: Tcpip.Stack.V4V6) (Time : Mirage_time.S) (Mclock : Mirage_clock.MCLOCK) = struct
+module Main (S: Tcpip.Stack.V4V6) = struct
 
   let server_ip = Ipaddr.of_string_exn "192.168.122.10"
   let server_port = 5001
@@ -61,7 +61,7 @@ module Main (S: Tcpip.Stack.V4V6) (Time : Mirage_time.S) (Mclock : Mirage_clock.
       end
 
   (* client function *)
-  let iperfclient amt dest_ip dport udp clock =
+  let iperfclient amt dest_ip dport udp =
     Logs.info (fun f -> f  "iperf client: Trying to connect to a server at %s:%d, buffer size = %d, protocol = udp" (Ipaddr.to_string server_ip) server_port mlen);
     Logs.info (fun f -> f  "iperf client: %.0d bytes data transfer initiated." amt);
     let zeros = Cstruct.create 40 in
@@ -80,14 +80,14 @@ module Main (S: Tcpip.Stack.V4V6) (Time : Mirage_time.S) (Mclock : Mirage_clock.
       | 0 -> 
         set_id a 0 >>= fun () ->
         write_and_check dest_ip dport udp a >>= fun () ->
-        st.start_time <- Mclock.elapsed_ns clock; 
+        st.start_time <- Mirage_mtime.elapsed_ns (); 
         loop (num + 1) body st
       (* Send a closing packet(s) to complete the measurement *)
       | -1 -> if reminder = 0 then
         begin
           set_id a (-1 * body) >>= fun () ->
           write_and_check dest_ip dport udp a >>= fun () ->
-          st.last_time <- Mclock.elapsed_ns clock; 
+          st.last_time <- Mirage_mtime.elapsed_ns (); 
           st.bytes <- (Int64.add st.bytes (Int64.of_int (Cstruct.length a)));
           Lwt.return_unit
         end
@@ -99,7 +99,7 @@ module Main (S: Tcpip.Stack.V4V6) (Time : Mirage_time.S) (Mclock : Mirage_clock.
           let a = Cstruct.sub a 0 reminder in
           set_id a (-1 * (body + 1)) >>= fun () ->
           write_and_check dest_ip dport udp a >>= fun () ->
-          st.last_time <- Mclock.elapsed_ns clock; 
+          st.last_time <- Mirage_mtime.elapsed_ns (); 
           st.bytes <- (Int64.add st.bytes (Int64.of_int (Cstruct.length a)));
           Lwt.return_unit
         end
@@ -116,7 +116,7 @@ module Main (S: Tcpip.Stack.V4V6) (Time : Mirage_time.S) (Mclock : Mirage_clock.
     in
 
     (* Measurement *)
-    let t0 = Mclock.elapsed_ns clock in
+    let t0 = Mirage_mtime.elapsed_ns () in
     let st = {
       bytes=0L; start_time = t0; last_time = t0
     } in
@@ -125,17 +125,17 @@ module Main (S: Tcpip.Stack.V4V6) (Time : Mirage_time.S) (Mclock : Mirage_clock.
     (* Print the obtained result *)
     print_data st >>= fun () ->
     Logs.info (fun f -> f  "iperf client: Done.");
-    Time.sleep_ns (Duration.of_sec 3) >>= fun () ->
+    Mirage_sleep.ns (Duration.of_sec 3) >>= fun () ->
     Lwt.return_unit
 
-  let start s _time _clock =
-    Time.sleep_ns (Duration.of_sec 1) >>= fun () -> (* Give server 1.0 s to call listen *)
+  let start s =
+    Mirage_sleep.ns (Duration.of_sec 1) >>= fun () -> (* Give server 1.0 s to call listen *)
     S.UDP.listen (S.udp s) ~port:server_port (fun ~src:_ ~dst:_ ~src_port:_ buf ->
       Logs.info (fun f -> f "iperf client: %.0Lu bytes received on the server side." (Cstruct.BE.get_uint64 buf 16));
       Lwt.return_unit
     );
     Lwt.async (fun () -> S.listen s);
     let udp = S.udp s in
-    iperfclient total_size server_ip server_port udp _clock
+    iperfclient total_size server_ip server_port udp
 
 end
