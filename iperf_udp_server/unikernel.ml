@@ -18,6 +18,7 @@
  *)
 
 open Lwt.Infix
+open Cmdliner
 
 type stats = {
   mutable bytes: int64;
@@ -25,15 +26,20 @@ type stats = {
   mutable end_time: int64
 }
 
-module Main (S: Tcpip.Stack.V4V6) = struct
+let port =
+  let doc =
+    Arg.info ~doc:"The UDP port of this iperf server."
+      [ "port" ]
+  in
+  Mirage_runtime.register_arg Arg.(value & opt int 5001 doc)
 
-  let server_port = 5001
+module Main (S: Tcpip.Stack.V4V6) = struct
 
   let start_id = Int32.of_int 0
 
   (* packet sending *)
   let write_and_check ip port udp buf =
-    S.UDP.write ~src_port:server_port ~dst:ip ~dst_port:port udp buf >|= Rresult.R.get_ok
+    S.UDP.write ~src_port:port ~dst:ip ~dst_port:port udp buf >|= Rresult.R.get_ok
 
   (* main server function *)
   let iperf s src_ip src_port st buf =
@@ -79,18 +85,20 @@ module Main (S: Tcpip.Stack.V4V6) = struct
     end
 
   let start s =
+    let iperf_port = (port ()) in
+
     let ips = List.map Ipaddr.Prefix.to_string (S.IP.configured_ips (S.ip s)) in
     (* debug is too much for us here *)
     Logs.set_level ~all:true (Some Logs.Info);
     Logs.info (fun f -> f "iperf_udp_server: process started:");
     Logs.info (fun f -> f "iperf_udp_server: IP address: %s" (String.concat "," ips));
-    Logs.info (fun f -> f "iperf_udp_server: Port number: %d" server_port);
+    Logs.info (fun f -> f "iperf_udp_server: Port number: %d" iperf_port);
 
     let st = {
       bytes=0L; start_time=0L; end_time=0L
     } in
 
-    S.UDP.listen (S.udp s) ~port:server_port (fun ~src ~dst:_ ~src_port buf ->
+    S.UDP.listen (S.udp s) ~port:iperf_port (fun ~src ~dst:_ ~src_port buf ->
       iperf s src src_port st buf
     );
     S.listen s

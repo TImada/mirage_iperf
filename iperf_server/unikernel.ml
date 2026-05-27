@@ -1,4 +1,5 @@
 open Lwt.Infix
+open Cmdliner
 
 type stats = {
   mutable bytes: int64;
@@ -6,9 +7,14 @@ type stats = {
   mutable last_time: int64;
 }
 
-module Main (S: Tcpip.Stack.V4V6) = struct
+let port =
+  let doc =
+    Arg.info ~doc:"The TCP port of this iperf server."
+      [ "port" ]
+  in
+  Mirage_runtime.register_arg Arg.(value & opt int 5001 doc)
 
-  let iperf_port = 5001
+module Main (S: Tcpip.Stack.V4V6) = struct
 
   let print_data st ts_now =
     let duration = Int64.sub ts_now st.start_time in
@@ -44,15 +50,17 @@ module Main (S: Tcpip.Stack.V4V6) = struct
     iperf_h flow >>= fun () ->
     Lwt.return_unit
 
- let start s =
-   let ips = List.map Ipaddr.Prefix.to_string (S.IP.configured_ips (S.ip s)) in
-   Logs.info (fun f -> f "iperf server process started:");
-   Logs.info (fun f -> f "IP address: %s" (String.concat "," ips));
-   Logs.info (fun f -> f "Port number: %d" iperf_port);
+  let start s =
+    let iperf_port = (port ()) in
 
-   S.TCP.listen (S.tcp s) ~port:iperf_port (fun flow ->
-     iperf flow
-   );
-   S.listen s
+    let ips = List.map Ipaddr.Prefix.to_string (S.IP.configured_ips (S.ip s)) in
+    Logs.info (fun f -> f "iperf server process started:");
+    Logs.info (fun f -> f "IP address: %s" (String.concat "," ips));
+    Logs.info (fun f -> f "Port number: %d" iperf_port);
+
+    S.TCP.listen (S.tcp s) ~port:iperf_port (fun flow ->
+      iperf flow
+    );
+    S.listen s
 
 end
